@@ -3,8 +3,6 @@ and the SQLite database. Remember that the API relies on a key that is
 stored in your `.env` file and imported via the `config` module.
 """
 
-import sqlite3
-
 import pandas as pd
 import requests
 from PIL import Image
@@ -17,7 +15,7 @@ from datetime import datetime, timedelta
 def hash_from_url(thumbnail, url):
     if thumbnail.startswith("https:"):
         response = requests.get(thumbnail)
-        if response.headers.get('content-type').startswith("image"):
+        if response.headers.get("content-type").startswith("image"):
             img = Image.open(BytesIO(response.content))
             img = img.resize((140,140))
             return str(imagehash.average_hash(img))
@@ -28,7 +26,9 @@ class RedditAPI:
     
         self.__Initialized = False
         self.subreddit = subreddit
-        self.to_delete = ['all_awardings', 'allow_live_comments', 'author_flair_css_class', 'author_flair_richtext', 'author_flair_text', 'author_flair_type', 'author_fullname', 'author_is_blocked', 'author_patreon_flair', 'author_premium', 'awarders', 'can_mod_post', 'content_categories', 'contest_mode', 'created_utc', 'domain', 'gilded', 'gildings', 'id', 'is_created_from_ads_ui', 'is_crosspostable', 'is_meta', 'is_original_content', 'is_reddit_media_domain', 'is_robot_indexable', 'is_self', 'is_video', 'link_flair_background_color', 'link_flair_css_class', 'link_flair_richtext', 'link_flair_text', 'link_flair_text_color', 'link_flair_type', 'locked', 'media_only', 'no_follow', 'num_comments', 'num_crossposts', 'over_18', 'parent_whitelist_status', 'permalink', 'pinned', 'post_hint', 'preview', 'pwls', 'retrieved_on', 'selftext', 'send_replies', 'spoiler', 'stickied', 'subreddit', 'subreddit_id', 'subreddit_subscribers', 'subreddit_type', 'top_awarded_type', 'total_awards_received', 'treatment_tags', 'upvote_ratio', 'url_overridden_by_dest', 'whitelist_status', 'wls', 'link_flair_template_id', 'author_flair_background_color', 'author_flair_text_color', 'suggested_sort', 'removed_by_category', 'author_cakeday',"author_flair_template_id", "crosspost_parent","crosspost_parent_list", "media", "media_embed", "secure_media", "secure_media_embed", "category"]
+        self.to_delete = ["all_awardings", "allow_live_comments", "author_flair_css_class", "author_flair_richtext", "author_flair_text", "author_flair_type", "author_fullname", "author_is_blocked", "author_patreon_flair", "author_premium", "awarders", "can_mod_post", "content_categories", "contest_mode", "created_utc", "domain", "gilded", "gildings", "id", "is_created_from_ads_ui", "is_crosspostable", "is_meta", "is_original_content", "is_reddit_media_domain", "is_robot_indexable", "is_self", "is_video", "link_flair_background_color", "link_flair_css_class", "link_flair_richtext", "link_flair_text", "link_flair_text_color", "link_flair_type", "locked", "media_only", "no_follow", "num_comments", "num_crossposts", "over_18", "parent_whitelist_status", "permalink", "pinned", "post_hint", "preview", "pwls", "retrieved_on", "selftext", "send_replies", "spoiler", "stickied", "subreddit", "subreddit_id", "subreddit_subscribers", "subreddit_type", "top_awarded_type", "total_awards_received", "treatment_tags", "upvote_ratio", "url_overridden_by_dest", "whitelist_status", "wls", "link_flair_template_id", "author_flair_background_color", "author_flair_text_color", "suggested_sort", "removed_by_category", "author_cakeday","author_flair_template_id", "crosspost_parent","crosspost_parent_list", "media", "media_embed", "secure_media", "secure_media_embed", "category"]
+    
+    ### Extract
     def initialize_past_data(self, start_year, query_per_year=1, minimum_score=1000):
         """Initialize a df with past data
 
@@ -38,7 +38,7 @@ class RedditAPI:
             The year we start querying at
         query_per_year=1
             The number of queries we look at per year
-            For example: query_per_year = 2 means we're querying the results every ~180 days
+            For example: query_per_year = 2 means we"re querying the results every ~180 days
         minimum_score=1000
             Restrict results based on scores = upvotes - downvotes. More often known simply as upvotes
 
@@ -46,7 +46,7 @@ class RedditAPI:
         -------
         pd.DataFrame
         """
-
+        
         # Check if instance has been initialized or not
         if not self.__Initialized:
 
@@ -84,13 +84,13 @@ class RedditAPI:
                 df = pd.DataFrame.from_dict(query_data)
 
                 # Create hash column
-                df['hash'] = df.apply(lambda x: hash_from_url(x.thumbnail, x.url), axis=1)
+                df["hash"] = df.apply(lambda x: hash_from_url(x.thumbnail, x.url), axis=1)
                 
                 # Remove deleted posts
                 df = df[df["hash"] != "Image empty"]
 
                 # Set hash to index
-                df.index = df['hash']
+                # df.index = df["hash"]
 
                 # Add request df to main df
                 appended_data.append(df)
@@ -108,7 +108,7 @@ class RedditAPI:
         print("Already Initialized")
         return
 
-
+    # Extract
     def update(self,max_return=500, upvotes = 5000):
         """Get lastest year top posts from r/pics.
 
@@ -146,13 +146,13 @@ class RedditAPI:
         df = pd.DataFrame.from_dict(query_data)
 
         # Create hash column
-        df['hash'] = df.apply(lambda x: hash_from_url(x.thumbnail, x.url), axis=1)
+        df["hash"] = df.apply(lambda x: hash_from_url(x.thumbnail, x.url), axis=1)
         
         # Remove deleted posts
         df = df[df["hash"] != "Image empty"]
 
         # Set hash to index
-        df = df.set_index("hash")
+        # df = df.set_index("hash")
 
         # Return DataFrame
         return df
@@ -162,8 +162,8 @@ class SQLRepository:
     def __init__(self,connection):
 
         self.connection = connection
-
-    def insert_table(self, table_name, records, if_exists='append'):
+    # Load
+    def insert_table(self, table_name, records, if_exists="append"):
     
         """Insert DataFrame into SQLite database as table
 
@@ -174,19 +174,19 @@ class SQLRepository:
         if_exists : str, optional
             How to behave if the table already exists.
 
-            - 'fail': Raise a ValueError.
-            - 'replace': Drop the table before inserting new values.
-            - 'append': Insert new values to the existing table.
+            - "fail": Raise a ValueError.
+            - "replace": Drop the table before inserting new values.
+            - "append": Insert new values to the existing table.
 
-            Dafault: 'fail'
+            Dafault: "fail"
 
         Returns
         -------
         dict
             Dictionary has two keys:
 
-            - 'transaction_successful', followed by bool
-            - 'records_inserted', followed by int
+            - "transaction_successful", followed by bool
+            - "records_inserted", followed by int
         """
         cur = self.connection.cursor()
         try:
@@ -219,11 +219,11 @@ class SQLRepository:
         Returns
         -------
         pd.DataFrame
-            Index is DatetimeIndex "date". Columns are 'open', 'high',
-            'low', 'close', and 'volume'. All columns are numeric.
+            Index is DatetimeIndex "date". Columns are "open", "high",
+            "low", "close", and "volume". All columns are numeric.
         """
         # Create SQL query (with optional limit)
-        query = f"SELECT * FROM '{table_name}'"
+        query = f"SELECT * FROM "{table_name}""
         if limit:
             query += f" LIMIT {limit}" 
 
@@ -234,3 +234,4 @@ class SQLRepository:
 
         # Return DataFrame
         return results
+

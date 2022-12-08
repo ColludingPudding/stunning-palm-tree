@@ -1,134 +1,99 @@
-import sqlite3
+import os
 
-from config import settings
-from data import SQLRepository
-from fastapi import FastAPI
-from pydantic import BaseModel
+import uvicorn
+from dotenv import load_dotenv
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi_sqlalchemy import DBSessionMiddleware, db
 
+from auth import AuthHandler
+from schema import AuthDetails
 
-# Task 8.4.14, `FitIn` class
-class FitIn(BaseModel):
-    ticker: str
-    use_new_data: bool
-    n_observations: int
-    p: int
-    q:int
+from models import Submission
+from models import Submission as ModelSubmission
+from schema import Submission as SchemaSubmission
 
-# Task 8.4.14, `FitOut` class
-class FitOut(FitIn):
-    success: bool
-    message: str
+load_dotenv(".env")
 
-# Task 8.4.18, `PredictIn` class
-class PredictIn(BaseModel):
-    ticker: str
-    n_days: str
-
-
-# Task 8.4.18, `PredictOut` class
-class PredictOut(PredictIn):
-    success: bool
-    forecast: dict
-    message: str
-
-
-# Task 8.4.9
 app = FastAPI()
 
+app.add_middleware(DBSessionMiddleware, db_url=os.environ["DATABASE_URL"])
 
-# Task 8.4.11
-# `"/hello" path with 200 status code
-@app.get("/hello", status_code=200)
-def hello():
-    """Return dictionary with greeting message."""
-    return {"message": "Hello world!"}
+auth_handler= AuthHandler()
+users=[]
 
+curl http://localhost:8000/register/ {"username":"potato", "password": "admin"}
 
+@app.post("/register/", status_code = 201)
+def register(auth_details: AuthDetails):
+    if any(x['username'] == auth_details.username for x in users):
+        raise HTTPException(status_code = 400, detail='Username is taken')
+    hashed_password = auth_details.get_password_hash(auth_details.password)
+    users.append({
+        'username': auth_details.username,
+        'password': hashed_password
+    })
+    return
 
-# Task 8.4.16, `"/fit" path, 200 status code
-@app.post("/fit", status_code=200, response_model = FitOut)
-def fit_model(request: FitIn):
+@app.post('/login/')
+def login(auth_details: AuthDetails):
+    user = None
+    for x in users:
+        if x['username'] == auth_details.username:
+            user = x
+            break
+    if (user is None) or (not auth_handler.verify_password(auth_details.password, user['password'])):
+        raise HTTPException(status_code= 401, detail= "Invalid username and/or password")
+    token = auth_handler.encode_token(user["username"])
+    return {'token':token}
 
-    """Fit model, return confirmation message.
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 
-    Parameters
-    ----------
-    request : FitIn
+'''
+@app.post("/add-submission/", response_model=SchemaSubmission)
+def add_submission(Submission: SchemaSubmission):  
+    submission_db = ModelSubmission(hash=Submission.hash, author = Submission.author,
+    full_link = Submission.full_link,
+    score = Submission.score,
+    thumbnail = Submission.thumbnail,
+    thumbnail_height = Submission.thumbnail_height,
+    thumbnail_width = Submission.thumbnail_width,
+    title = Submission.title,
+    url = Submission.url)
 
-    Returns
-    ------
-    dict
-        Must conform to `FitOut` class
-    """
-    # Create `response` dictionary from `request`
-    response = request.dict()
-    
-    # Create try block to handle exceptions
-    try:
-        # Build model with `build_model` function
+    db.session.add(submission_db)
+    db.session.commit()
+    return submission_db
+'''
+'''
+@app.Submission("/bulk-update/")
+def bulk_update():
+    values = [{'id': 0, 'test_value': 'a'}, {'id': 1, 'test_value': 'b'}]
+    insert_stmt = Submissiongresql.insert(MyTable.__table__).values(values)
 
-        # Wrangle data
-        model.wrangle_data(n_observations = request.n_observations)
+    update_stmt = insert_stmt.on_conflict_do_update(
+    index_elements=[MyTable.id],
+    set_=dict(data=values)
+    )
+'''
+'''
+@app.get("/Submissions/")
+def get_Submissions(username=Depends(auth_handler.auth_wrapper)):
+    Submissions = db.session.query(Submission).all()
 
-        # Fit model
-        model.fit(p=request.p,q=request.q)
+    return Submissions
 
-        # Save model
-        filename=model.dump()
-
-        # Add `"success"` key to `response`
-        response["success"] = True
-
-        # Add `"message"` key to `response` with `filename`
-        response["message"] = f"model train and saved {filename}"
-
-    # Create except block
-    except Exception as e:
-        
-        # Add `"success"` key to `response`
-        response["success"] = False
-
-        # Add `"message"` key to `response` with error message
-        response["message"] = str(e)
-
-    # Return response
-    return response
-
-
-# Task 8.4.19 `"/predict" path, 200 status code
-@app.post("/predict", status_code=200, response_model = PredictOut)
-def get_prediction(request: PredictIn):
-
-    # Create `response` dictionary from `request`
-    response = request.dict()
-
-    # Create try block to handle exceptions
-    try:
-        # Build model with `build_model` function
-        model = build_model(ticker = request.ticker,use_new_data=False)
-
-        # Load stored model
-        model.load()
-
-        # Generate prediction
-        prediction = model.predict_volatility(horizon = request.n_days)
-
-        # Add `"success"` key to `response`
-        response["success"] = True
-        
-        response["forecast"] = prediction
-        # Add `"message"` key to `response` with `filename`
-        response["message"] = ""
-
-    # Create except block
-    except Exception as e:
-        
-        # Add `"success"` key to `response`
-        response["success"] = False
-        response["forecast"] = {}
-        # Add `"message"` key to `response` with error message
-        response["message"] = str(e)
+'''
+# @app.Submission("/user/", response_model=SchemaUser)
+# def create_user(user: SchemaUser):
+#     db_user = ModelUser(
+#         first_name=user.first_name, last_name=user.last_name, age=user.age
+#     )
+#     db.session.add(db_user)
+#     db.session.commit()
+#     return db_user
 
 
-    # Return response
-    return response
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
